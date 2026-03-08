@@ -1,3 +1,4 @@
+import React from "react";
 import { LayoutDashboard, Package, ShoppingCart, Settings } from "lucide-react";
 
 export default function Sidebar({ activePage, setActivePage }) {
