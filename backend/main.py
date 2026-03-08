@@ -23,45 +23,50 @@ app.add_middleware(
 # ─── Seed Data ─────────────────────────────────────────────────────────────────
 def seed_data():
     db = SessionLocal()
-    if db.query(models.Medicine).count() == 0:
-        medicines = [
-            models.Medicine(medicine_name="Paracetamol 650mg", generic_name="Acetaminophen",
-                category="Analgesic", batch_no="PCM-2024-0892", expiry_date=date(2026, 8, 20),
-                quantity=500, cost_price=15.0, mrp=25.0, supplier="MedSupply Co.", status="Active"),
-            models.Medicine(medicine_name="Omeprazole 20mg Capsule", generic_name="Omeprazole",
-                category="Gastric", batch_no="OMP-2024-5873", expiry_date=date(2025, 11, 10),
-                quantity=45, cost_price=65.0, mrp=95.75, supplier="HealthCare Ltd.", status="Low Stock"),
-            models.Medicine(medicine_name="Aspirin 75mg", generic_name="Aspirin",
-                category="Anticoagulant", batch_no="ASP-2023-3421", expiry_date=date(2024, 9, 30),
-                quantity=300, cost_price=20.0, mrp=45.0, supplier="GreenMed", status="Expired"),
-            models.Medicine(medicine_name="Atorvastatin 10mg", generic_name="Atorvastatin Besylate",
-                category="Cardiovascular", batch_no="AME-2024-0945", expiry_date=date(2026, 10, 15),
-                quantity=0, cost_price=145.0, mrp=195.0, supplier="PharmaCorp", status="Out of Stock"),
-            models.Medicine(medicine_name="Metformin 500mg", generic_name="Metformin HCl",
-                category="Antidiabetic", batch_no="MET-2024-1122", expiry_date=date(2026, 5, 1),
-                quantity=200, cost_price=30.0, mrp=55.0, supplier="MedSupply Co.", status="Active"),
-        ]
-        db.add_all(medicines)
+    try:
+        if db.query(models.Medicine).count() == 0:
+            medicines = [
+                models.Medicine(medicine_name="Paracetamol 650mg", generic_name="Acetaminophen",
+                    category="Analgesic", batch_no="PCM-2024-0892", expiry_date=date(2026, 8, 20),
+                    quantity=500, cost_price=15.0, mrp=25.0, supplier="MedSupply Co.", status="Active"),
+                models.Medicine(medicine_name="Omeprazole 20mg Capsule", generic_name="Omeprazole",
+                    category="Gastric", batch_no="OMP-2024-5873", expiry_date=date(2025, 11, 10),
+                    quantity=45, cost_price=65.0, mrp=95.75, supplier="HealthCare Ltd.", status="Low Stock"),
+                models.Medicine(medicine_name="Aspirin 75mg", generic_name="Aspirin",
+                    category="Anticoagulant", batch_no="ASP-2023-3421", expiry_date=date(2024, 9, 30),
+                    quantity=300, cost_price=20.0, mrp=45.0, supplier="GreenMed", status="Expired"),
+                models.Medicine(medicine_name="Atorvastatin 10mg", generic_name="Atorvastatin Besylate",
+                    category="Cardiovascular", batch_no="AME-2024-0945", expiry_date=date(2026, 10, 15),
+                    quantity=0, cost_price=145.0, mrp=195.0, supplier="PharmaCorp", status="Out of Stock"),
+                models.Medicine(medicine_name="Metformin 500mg", generic_name="Metformin HCl",
+                    category="Antidiabetic", batch_no="MET-2024-1122", expiry_date=date(2026, 5, 1),
+                    quantity=200, cost_price=30.0, mrp=55.0, supplier="MedSupply Co.", status="Active"),
+            ]
+            db.add_all(medicines)
 
-        sales = [
-            models.Sale(invoice_no="INV-2024-1234", customer_name="Rajesh Kumar",
-                items_count=3, total_amount=340.0, payment_method="Card", status="Completed"),
-            models.Sale(invoice_no="INV-2024-1235", customer_name="Sarah Smith",
-                items_count=2, total_amount=145.0, payment_method="Cash", status="Completed"),
-            models.Sale(invoice_no="INV-2024-1236", customer_name="Michael Johnson",
-                items_count=5, total_amount=525.0, payment_method="UPI", status="Completed"),
-        ]
-        db.add_all(sales)
+            sales = [
+                models.Sale(invoice_no="INV-2024-1234", customer_name="Rajesh Kumar",
+                    items_count=3, total_amount=340.0, payment_method="Card", status="Completed"),
+                models.Sale(invoice_no="INV-2024-1235", customer_name="Sarah Smith",
+                    items_count=2, total_amount=145.0, payment_method="Cash", status="Completed"),
+                models.Sale(invoice_no="INV-2024-1236", customer_name="Michael Johnson",
+                    items_count=5, total_amount=525.0, payment_method="UPI", status="Completed"),
+            ]
+            db.add_all(sales)
 
-        orders = [
-            models.PurchaseOrder(order_no="PO-2024-001", supplier="MedSupply Co.",
-                total_amount=12000.0, status="Pending"),
-            models.PurchaseOrder(order_no="PO-2024-002", supplier="HealthCare Ltd.",
-                total_amount=8500.0, status="Pending"),
-        ]
-        db.add_all(orders)
-        db.commit()
-    db.close()
+            orders = [
+                models.PurchaseOrder(order_no="PO-2024-001", supplier="MedSupply Co.",
+                    total_amount=12000.0, status="Pending"),
+                models.PurchaseOrder(order_no="PO-2024-002", supplier="HealthCare Ltd.",
+                    total_amount=8500.0, status="Pending"),
+            ]
+            db.add_all(orders)
+            db.commit()
+    except Exception as e:
+        print(f"Seed error: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 seed_data()
 
