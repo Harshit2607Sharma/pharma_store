@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../api";
 import MedicineModal from "../components/MedicineModal";
 import { Search, Package, CheckCircle, AlertTriangle, DollarSign } from "lucide-react";
