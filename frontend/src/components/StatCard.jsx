@@ -1,3 +1,4 @@
+import React from "react";
 export default function StatCard({ icon, color, badge, badgeColor, value, label }) {
   return (
     <div className="stat-card">
