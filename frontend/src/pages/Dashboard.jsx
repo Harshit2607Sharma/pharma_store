@@ -3,11 +3,16 @@ import { api } from "../api";
 import StatCard from "../components/StatCard";
 import { DollarSign, ShoppingCart, AlertTriangle, RefreshCw } from "lucide-react";
 
-export default function Dashboard() {
+export default function Dashboard({ setActivePage }) {
   const [summary, setSummary] = useState(null);
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState("sales");
+  const [patientId, setPatientId] = useState("");
+  const [medicineSearch, setMedicineSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
     Promise.all([api.getDashboardSummary(), api.getRecentSales()])
@@ -16,11 +21,19 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleOrder = async () => {
+    if (!medicineSearch.trim()) return;
+    const results = await api.getMedicines({ search: medicineSearch });
+    setSearchResults(results);
+    setSearched(true);
+  };
+
   if (loading) return <div className="loading">Loading dashboard...</div>;
   if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Pharmacy CRM</h1>
@@ -28,10 +41,11 @@ export default function Dashboard() {
         </div>
         <div className="page-actions">
           <button className="btn-secondary">↑ Export</button>
-          <button className="btn-primary">+ Add Medicine</button>
+          <button className="btn-primary" onClick={() => setActivePage("inventory")}>+ Add Medicine</button>
         </div>
       </div>
 
+      {/* Stat Cards */}
       <div className="stat-grid">
         <StatCard
           icon={<DollarSign size={20} />}
@@ -67,31 +81,122 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="card">
-        <h3 className="section-title">Recent Sales</h3>
-        <div className="sales-list">
-          {sales.map(sale => (
-            <div key={sale.id} className="sale-row">
-              <div className="sale-icon">🛒</div>
-              <div className="sale-info">
-                <span className="sale-invoice">{sale.invoice_no}</span>
-                <span className="sale-meta">
-                  {sale.customer_name} · {sale.items_count} items · {sale.payment_method}
-                </span>
-              </div>
-              <div className="sale-right">
-                <span className="sale-amount">₹{sale.total_amount}</span>
-                <span className="sale-date">
-                  {new Date(sale.sale_date).toLocaleDateString("en-IN")}
-                </span>
-                <span className={`status-badge ${sale.status.toLowerCase().replace(" ", "-")}`}>
-                  {sale.status}
-                </span>
-              </div>
-            </div>
-          ))}
+      {/* Tabs + Action Buttons */}
+      <div className="tabs-row">
+        <div className="tabs">
+          <button className={`tab ${activeTab === "sales" ? "active" : ""}`} onClick={() => setActiveTab("sales")}>
+            🛒 Sales
+          </button>
+          <button className={`tab ${activeTab === "purchase" ? "active" : ""}`} onClick={() => setActiveTab("purchase")}>
+            🛍 Purchase
+          </button>
+          <button className={`tab ${activeTab === "inventory" ? "active" : ""}`} onClick={() => { setActiveTab("inventory"); setActivePage("inventory"); }}>
+            📦 Inventory
+          </button>
+        </div>
+        <div className="page-actions">
+          <button className="btn-primary">+ New Sale</button>
+          <button className="btn-secondary">+ New Purchase</button>
         </div>
       </div>
+
+      {/* Make a Sale Section */}
+      {activeTab === "sales" && (
+        <div className="card">
+          <h3 className="section-title">Make a Sale</h3>
+          <p className="section-sub">Select medicines from inventory</p>
+
+          <div className="sale-controls">
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Patient Id"
+              value={patientId}
+              onChange={e => setPatientId(e.target.value)}
+            />
+            <div className="search-row">
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="Search medicines..."
+                  value={medicineSearch}
+                  onChange={e => setMedicineSearch(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleOrder()}
+                />
+              </div>
+              <button className="btn-primary" onClick={handleOrder}>Order</button>
+              <button className="btn-bill">Bill</button>
+            </div>
+          </div>
+
+          {/* Medicine Search Table */}
+          <div className="table-wrapper" style={{ marginTop: 16 }}>
+            <table className="inventory-table">
+              <thead>
+                <tr>
+                  {["Medicine Name", "Generic Name", "Batch No", "Expiry Date",
+                    "Quantity", "MRP / Price", "Supplier", "Status", "Actions"].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {searched && searchResults.length === 0 && (
+                  <tr><td colSpan={9} style={{ textAlign: "center", color: "#aaa", padding: 20 }}>No medicines found</td></tr>
+                )}
+                {searchResults.map(med => (
+                  <tr key={med.id}>
+                    <td className="med-name">{med.medicine_name}</td>
+                    <td>{med.generic_name}</td>
+                    <td>{med.batch_no}</td>
+                    <td>{med.expiry_date}</td>
+                    <td>{med.quantity}</td>
+                    <td>₹{med.mrp}</td>
+                    <td>{med.supplier}</td>
+                    <td>
+                      <span className={`status-badge ${med.status.toLowerCase().replace(" ", "-")}`}>
+                        {med.status}
+                      </span>
+                    </td>
+                    <td><button className="btn-sm">Add</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Recent Sales */}
+          <h3 className="section-title" style={{ marginTop: 28 }}>Recent Sales</h3>
+          <div className="sales-list">
+            {sales.map(sale => (
+              <div key={sale.id} className="sale-row">
+                <div className="sale-icon">🛒</div>
+                <div className="sale-info">
+                  <span className="sale-invoice">{sale.invoice_no}</span>
+                  <span className="sale-meta">
+                    {sale.customer_name} · {sale.items_count} items · {sale.payment_method}
+                  </span>
+                </div>
+                <div className="sale-right">
+                  <span className="sale-amount">₹{sale.total_amount}</span>
+                  <span className="sale-date">
+                    {new Date(sale.sale_date).toLocaleDateString("en-IN")}
+                  </span>
+                  <span className={`status-badge ${sale.status.toLowerCase()}`}>
+                    {sale.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "purchase" && (
+        <div className="card">
+          <p style={{ color: "#aaa", fontSize: 14 }}>Purchase orders coming soon.</p>
+        </div>
+      )}
     </div>
   );
 }
