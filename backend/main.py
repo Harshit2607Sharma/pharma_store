@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -13,13 +14,13 @@ app = FastAPI(title="Pharmacy CRM API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Seed Data 
+# ─── Seed Data ─────────────────────────────────────────────────────────────────
 def seed_data():
     db = SessionLocal()
     if db.query(models.Medicine).count() == 0:
@@ -64,21 +65,19 @@ def seed_data():
 
 seed_data()
 
-# Dashboard Endpoints 
+# ─── Dashboard Endpoints ────────────────────────────────────────────────────────
+
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(db: Session = Depends(get_db)):
     today = date.today()
 
-    # Today's sales
     today_sales = db.query(func.sum(models.Sale.total_amount)).filter(
         func.date(models.Sale.sale_date) == today
     ).scalar() or 0
 
-    # Fallback: total sales if no today sales
     if today_sales == 0:
         today_sales = db.query(func.sum(models.Sale.total_amount)).scalar() or 124580
 
-    # Items sold today
     items_sold = db.query(func.sum(models.Sale.items_count)).filter(
         func.date(models.Sale.sale_date) == today
     ).scalar() or 0
@@ -86,12 +85,10 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     if items_sold == 0:
         items_sold = db.query(func.sum(models.Sale.items_count)).scalar() or 156
 
-    # Low stock items (quantity < 50 and not expired/out of stock)
     low_stock_count = db.query(models.Medicine).filter(
         models.Medicine.status == "Low Stock"
     ).count()
 
-    # Pending purchase orders
     pending_orders = db.query(models.PurchaseOrder).filter(
         models.PurchaseOrder.status == "Pending"
     ).count()
@@ -127,7 +124,8 @@ def get_recent_sales(limit: int = 10, db: Session = Depends(get_db)):
         for s in sales
     ]
 
-# Inventory Endpoints 
+# ─── Inventory Endpoints ────────────────────────────────────────────────────────
+
 @app.get("/api/inventory/summary")
 def get_inventory_summary(db: Session = Depends(get_db)):
     total = db.query(models.Medicine).count()
@@ -171,7 +169,6 @@ def get_medicine(medicine_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/inventory/medicines", response_model=schemas.MedicineResponse, status_code=201)
 def add_medicine(medicine: schemas.MedicineCreate, db: Session = Depends(get_db)):
-    # Auto-determine status
     if medicine.quantity == 0:
         medicine.status = "Out of Stock"
     elif medicine.expiry_date and medicine.expiry_date < date.today():
@@ -198,7 +195,6 @@ def update_medicine(medicine_id: int, medicine: schemas.MedicineUpdate, db: Sess
     for key, value in update_data.items():
         setattr(db_med, key, value)
 
-    # Recalculate status if quantity or expiry changed
     if "quantity" in update_data or "expiry_date" in update_data:
         if db_med.quantity == 0:
             db_med.status = "Out of Stock"
